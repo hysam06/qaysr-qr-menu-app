@@ -1,0 +1,8 @@
+{
+  "appId": "com.alqaysar.staff",
+  "appName": "Al Qaysar Staff",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

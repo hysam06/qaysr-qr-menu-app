@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Al Qaysar Restaurant Staff Menu Manager">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Staff Manager">
+<title>Al Qaysar – Staff Menu Manager</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log('Service Worker registered'))
+      .catch(err => console.log('Service Worker registration failed:', err));
+  });
+}
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; color: #1a1a1a; min-height: 100vh; }
+
+  /* LOGIN */
+  #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+  .login-card { background: #fff; border-radius: 16px; border: 1px solid #e5e3dc; padding: 36px 32px; width: 100%; max-width: 360px; }
+  .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .login-card p { font-size: 13px; color: #888; margin-bottom: 24px; }
+  .login-card input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; margin-bottom: 12px; outline: none; }
+  .login-card input:focus { border-color: #333; }
+  .login-card button { width: 100%; padding: 11px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; }
+  .login-card button:active { opacity: 0.85; }
+  .login-error { color: #c0392b; font-size: 13px; margin-top: 8px; text-align: center; }
+
+  /* MAIN APP */
+  #app { display: none; }
+  .top-bar { background: #fff; border-bottom: 1px solid #e5e3dc; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .top-bar h1 { font-size: 17px; font-weight: 600; }
+  .top-bar span { font-size: 12px; color: #888; }
+  .logout-btn { font-size: 12px; color: #888; background: none; border: 1px solid #ddd; padding: 5px 12px; border-radius: 20px; cursor: pointer; }
+
+  .save-bar { padding: 12px 16px; background: #fff; border-bottom: 1px solid #e5e3dc; display: flex; align-items: center; gap: 10px; }
+  .save-btn { flex: 1; padding: 11px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+  .save-btn:active { opacity: 0.8; }
+  .save-btn.saved { background: #27ae60; }
+  .count-pill { font-size: 12px; background: #f0ede8; color: #555; padding: 4px 12px; border-radius: 20px; white-space: nowrap; }
+  .toast { font-size: 12px; color: #27ae60; padding: 4px 0; text-align: center; min-height: 20px; }
+
+  .search-bar { padding: 10px 16px; background: #f5f4f0; }
+  .search-bar input { width: 100%; padding: 9px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #fff; outline: none; }
+
+  .section-header { padding: 14px 16px 6px; font-size: 11px; font-weight: 600; color: #888; letter-spacing: 0.07em; text-transform: uppercase; background: #f5f4f0; }
+  .dish-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; background: #fff; border-bottom: 1px solid #f0ede8; cursor: pointer; user-select: none; transition: background 0.1s; }
+  .dish-row:hover { background: #faf9f6; }
+  .dish-row.on { background: #f0faf5; }
+  .checkbox { width: 22px; height: 22px; border-radius: 5px; border: 2px solid #ccc; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .dish-row.on .checkbox { background: #27ae60; border-color: #27ae60; }
+  .checkmark { width: 12px; height: 8px; border-left: 2.5px solid #fff; border-bottom: 2.5px solid #fff; transform: rotate(-45deg) translate(1px, -1px); display: none; }
+  .dish-row.on .checkmark { display: block; }
+  .dish-info { flex: 1; }
+  .dish-name { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+  .dish-name-ar { font-size: 12px; color: #888; margin-top: 1px; direction: rtl; }
+  .dish-price { font-size: 13px; color: #555; white-space: nowrap; }
+
+  .select-all-row { display: flex; gap: 8px; padding: 6px 16px 4px; background: #f5f4f0; }
+  .mini-btn { font-size: 11px; color: #555; background: #fff; border: 1px solid #ddd; padding: 4px 10px; border-radius: 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>Al Qaysar</h1>
+    <p>Staff access — menu manager</p>
+    <input type="password" id="pin-input" placeholder="Enter staff PIN" maxlength="10" />
+    <button onclick="doLogin()">Sign in</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="top-bar">
+    <div>
+      <h1>Menu Manager</h1>
+      <span id="today-date"></span>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Logout</button>
+  </div>
+  <div class="save-bar">
+    <button class="save-btn" id="save-btn" onclick="saveMenu()">Update guest menu</button>
+    <div class="count-pill" id="count-pill">0 dishes on</div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="search-bar">
+    <input type="text" id="search-input" placeholder="Search dishes..." oninput="filterDishes(this.value)" />
+  </div>
+  <div id="menu-list"></div>
+</div>
+
+<script>
+// ==========================================
+// FIREBASE CONFIG — PASTE YOURS HERE
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCxvxgkzALj5Mip7GHAJBK9SYnNm9qO0KI",
+  authDomain: "alqaysar-menu.firebaseapp.com",
+  databaseURL: "https://alqaysar-menu-default-rtdb.firebaseio.com",
+  projectId: "alqaysar-menu",
+  storageBucket: "alqaysar-menu.firebasestorage.app",
+  messagingSenderId: "181160036262",
+  appId: "1:181160036262:web:d26f2d2504b880807bb167",
+  measurementId: "G-3ZTYG4EHMT"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+// ==========================================
+
+const STAFF_PIN = "1234"; // Change this PIN
+
+const MENU = [
+  { section: "Appetizers", items: [
+    { id: "veg_salad", en: "Vegetable Salad", ar: "سلطة خضار", price: "6.00" },
+    { id: "milk_cucumber", en: "Milk Cucumber", ar: "خيار لبن", price: "4.00" },
+    { id: "hot_pepper", en: "Hot Pepper", ar: "شطة حار", price: "3.00" },
+    { id: "green_chili", en: "Hot Green Chili Pepper", ar: "شطة أخضر حار", price: "3.00" },
+    { id: "tahini", en: "Tahini", ar: "طحينة", price: "3.00" },
+    { id: "rana_pepper", en: "Rana Hot Pepper", ar: "شطة رنا", price: "2.00" },
+    { id: "chicken_wings", en: "Chicken Wings", ar: "أجنحة دجاج", price: "20.00" },
+    { id: "chicken_spring", en: "Chicken Spring Roll", ar: "سبرينغ رول دجاج", price: "12.00" },
+    { id: "veg_spring", en: "Vegetable Spring Roll", ar: "سبرينغ رول خضاروات", price: "8.00" },
+    { id: "prawn_spring", en: "Prawn Spring Roll", ar: "سبرينغ رول روبيان", price: "12.00" },
+    { id: "fish_finger", en: "Fish Finger with Tartar Sauce", ar: "أصابع سمك مع صلصة", price: "12.00" },
+    { id: "butterfly_prawn", en: "Butterfly Tail Prawn", ar: "روبيان زيل الفراشة", price: "20.00" },
+    { id: "french_fries", en: "French Fries", ar: "بطاطس مقلية", price: "5.00" },
+  ]},
+  { section: "Eidam (Stews)", items: [
+    { id: "meat_stew", en: "Meat Stew", ar: "إيدام لحم", price: "" },
+    { id: "musakhan_stew", en: "Musakhan Stew", ar: "إيدام مصقعة", price: "" },
+    { id: "mixed_stew", en: "Mixed Stew", ar: "إيدام مشكل فرن", price: "" },
+    { id: "mixed_veg_stew", en: "Mixed Vegetable Stew", ar: "إيدام مشكل خضار", price: "" },
+    { id: "potato_stew", en: "Potato Stew", ar: "إيدام بطاطس", price: "" },
+    { id: "okra_stew", en: "Okra Stew", ar: "إيدام بامية", price: "" },
+    { id: "pasta_stew", en: "Pasta Stew", ar: "إيدام مكرونة كبير", price: "8.00" },
+    { id: "molokhia_stew", en: "Molokhia Stew", ar: "إيدام ملوخية", price: "" },
+    { id: "spicy_chicken_stew", en: "Spicy Chicken Stew", ar: "إيدام دجاج حار", price: "" },
+    { id: "lentil_stew", en: "Lentil Stew", ar: "إيدام عدس", price: "" },
+    { id: "bean_stew", en: "Bean Stew", ar: "إيدام فاصوليا", price: "" },
+    { id: "cauliflower_stew", en: "Cauliflower Stew", ar: "إيدام زهرة", price: "" },
+    { id: "spinach_stew", en: "Spinach Stew", ar: "إيدام سبانخ", price: "" },
+    { id: "minced_meat", en: "Minced Meat", ar: "إيدام مفروم", price: "" },
+  ]},
+  { section: "Grills", items: [
+    { id: "chicken_kebab_p", en: "Chicken Kebab (Person)", ar: "نفر كباب دجاج", price: "24.00" },
+    { id: "meat_kebab_p", en: "Meat Kebab (Person)", ar: "نفر كباب لحم", price: "27.00" },
+    { id: "chicken_thighs", en: "Chicken Thighs", ar: "نفر أوصال دجاج", price: "27.00" },
+    { id: "shish_kebab", en: "Chicken Shish Kebab", ar: "نفر شيش طاووق", price: "27.00" },
+    { id: "chicken_kebab_sw", en: "Chicken Kebab Sandwich", ar: "ساندوتش كباب دجاج", price: "10.00" },
+    { id: "meat_kebab_sw", en: "Meat Kebab Sandwich", ar: "ساندوتش كباب لحم", price: "10.00" },
+    { id: "platter_3", en: "Mixed Platter (3 Person)", ar: "طبق مشكل 3 أشخاص", price: "100.00" },
+    { id: "platter_5", en: "Mixed Platter (5 Person)", ar: "طبق مشكل 5 أشخاص", price: "140.00" },
+    { id: "platter_7", en: "Mixed Platter (7 Person)", ar: "طبق مشكل 7 أشخاص", price: "190.00" },
+  ]},
+  { section: "Chinese", items: [
+    { id: "fried_rice", en: "Fried Rice", ar: "رز مقلي", price: "18.00" },
+    { id: "manchurian", en: "Chicken Manchurian", ar: "دجاج منشوريان", price: "20.00" },
+    { id: "chow_mein", en: "Chow Mein / Noodles", ar: "نودلز تشاو مين", price: "18.00" },
+    { id: "spring_rolls_cn", en: "Spring Rolls", ar: "سبرينغ رول", price: "8.00" },
+    { id: "sweet_sour", en: "Sweet and Sour Chicken", ar: "دجاج حلو وحامض", price: "22.00" },
+  ]},
+  { section: "Sea Food", items: [
+    { id: "fried_shrimp", en: "Fried Shrimp Meal", ar: "وجبة روبيان مقلي", price: "35.00" },
+    { id: "grilled_shrimp", en: "Grilled Shrimp Meal", ar: "وجبة روبيان مشوي", price: "37.00" },
+    { id: "tandoori_prawn", en: "Tandoori Masala Prawn", ar: "روبيان تندوري ماسالا", price: "38.00" },
+    { id: "fried_fish", en: "Fried Fish Meal", ar: "وجبة سمك مقلي", price: "30.00" },
+    { id: "grilled_fish", en: "Grilled Fish Meal", ar: "وجبة سمك مشوي", price: "32.00" },
+    { id: "tandoori_fish", en: "Tandoori Masala Fish", ar: "سمك تندوري ماسالا", price: "34.00" },
+  ]},
+  { section: "Saudi Food", items: [
+    { id: "grilled_chicken_plain", en: "Grilled Chicken Plain", ar: "حبة دجاج شواية سادة", price: "" },
+    { id: "charcoal_chicken", en: "Chicken on Charcoal Plain", ar: "حبة دجاج على الفحم سادة", price: "" },
+    { id: "fried_chicken_plain", en: "Fried Chicken Plain", ar: "حبة دجاج مقلي سادة", price: "" },
+    { id: "half_grilled_chicken", en: "Half Grilled Chicken", ar: "نصف دجاخ شواية سادة", price: "" },
+    { id: "half_charcoal_chicken", en: "Half Chicken on Charcoal", ar: "نصف دجاخ على الفحم سادة", price: "" },
+  ]},
+  { section: "Meat", items: [
+    { id: "kabsa_half", en: "Meat Kabsa Half Person", ar: "نصف نفر كبسة لحم", price: "32.00" },
+    { id: "kabsa_full", en: "Meat Kabsa Full Person", ar: "نفر كبسة لحم مع أرز", price: "64.00" },
+  ]},
+  { section: "Rice", items: [
+    { id: "bukhari_rice", en: "Bukhari Rice (Person)", ar: "نفر أرز بخاري", price: "7.00" },
+    { id: "peshawari_rice", en: "Peshawari Rice (Person)", ar: "نفر أرز بشاوري", price: "7.00" },
+    { id: "kabuli_rice", en: "Kabuli Rice", ar: "نفر أرز كابلي", price: "8.00" },
+    { id: "half_rice", en: "Half Person Rice", ar: "نص نفر أرز", price: "4.00" },
+    { id: "chicken_biryani", en: "Chicken Biryani", ar: "برياني دجاج", price: "" },
+    { id: "chicken_fried_rice", en: "Chicken Fried Rice", ar: "أرز مقلي بالدجاج", price: "" },
+    { id: "veg_rice", en: "Vegetable Rice", ar: "أرز بالخضار", price: "" },
+    { id: "chinese_rice", en: "Chinese Rice", ar: "أرز صيني", price: "" },
+    { id: "beef_chilli_rice", en: "Beef Chilli Rice", ar: "أرز بالفلفل الحار واللحم", price: "" },
+    { id: "steamed_rice_chicken", en: "Steamed Rice with Chicken", ar: "أرز على البخار مع أرز بالدجاج", price: "" },
+    { id: "singaporean_rice", en: "Singaporean Rice", ar: "أرز سنغافوري", price: "" },
+    { id: "steamed_rice", en: "Steamed Rice", ar: "أرز على البخار", price: "7.00" },
+  ]},
+  { section: "Karahi Station", items: [
+    { id: "chicken_karahi_half", en: "Chicken Karahi Half", ar: "دجاج ساج نصف", price: "30.00" },
+    { id: "chicken_karahi_full", en: "Chicken Karahi Full", ar: "دجاج ساج كامل", price: "60.00" },
+    { id: "chicken_white_karahi", en: "Chicken White Karahi", ar: "دجاج ساج أبيض", price: "" },
+    { id: "chicken_makhani", en: "Chicken Makhani Karahi", ar: "دجاج ساج بلزبدة", price: "" },
+    { id: "chicken_namkeen", en: "Chicken Namkeen Karahi", ar: "دجاج ساج مملح", price: "" },
+    { id: "sulemani_karahi", en: "Sulemani Karahi", ar: "ساج سليماني", price: "" },
+    { id: "lamb_karahi", en: "Lamb Karahi", ar: "ساج لحم الضأن", price: "" },
+    { id: "achar_gosht", en: "Achar Gosht Karahi", ar: "ساج لحم بالأجار", price: "" },
+    { id: "peshawari_karahi", en: "Peshawari Karahi", ar: "ساج بشاوري", price: "" },
+    { id: "haleem_large", en: "Pakistani Haleem Large", ar: "حليم باكستاني كبير", price: "20.00" },
+    { id: "haleem_small", en: "Pakistani Haleem Small", ar: "حليم باكستاني صغير", price: "12.00" },
+  ]},
+  { section: "BBQ", items: [
+    { id: "chicken_tikka", en: "Chicken Tikka", ar: "چکن تكه", price: "" },
+    { id: "seekh_beef_full", en: "Seekh Kabab Beef Full", ar: "سيخ كباب بيف", price: "" },
+    { id: "chapli_beef", en: "Chapal Kabab Beef", ar: "چپل کباب بيف", price: "" },
+    { id: "behari_boti", en: "Behari Boti", ar: "بہاری بوٹی", price: "" },
+    { id: "malai_boti", en: "Malai Boti", ar: "ملائی بوٹی", price: "" },
+    { id: "tikka_seekh", en: "Tikka Seekh Kabab", ar: "تکہ سیخ کباب", price: "" },
+    { id: "mutton_seekh", en: "Mutton Seekh Kabab", ar: "مٹن سیخ کباب", price: "" },
+    { id: "chicken_seekh", en: "Chicken Seekh Kabab", ar: "چکن سیخ کباب", price: "" },
+    { id: "reshmi_kabab", en: "Reshmi Kabab", ar: "ریشمی کباب", price: "" },
+    { id: "seekh_beef_half", en: "Seekh Kabab Beef Half", ar: "سيخ كباب بيف نصف", price: "" },
+    { id: "shashlik_dry", en: "Chicken Shashlik Dry", ar: "شيش طاووق دجاج جاف", price: "" },
+    { id: "cheese_steak", en: "Cheese Steak", ar: "ستيك جبن", price: "22.00" },
+    { id: "onion_steak", en: "Onion Steak", ar: "ستيك بصل", price: "6.00" },
+    { id: "pepper_steak", en: "Pepper Steak", ar: "ستيك فلفل", price: "6.00" },
+    { id: "grilled_steak", en: "Grilled Steak", ar: "ستيك مشوي", price: "6.00" },
+    { id: "chicken_steak", en: "Chicken Steak", ar: "ستيك دجاج", price: "20.00" },
+    { id: "chicken_italian", en: "Chicken Italian", ar: "دجاج إيطالي", price: "40.00" },
+    { id: "mix_kabab_kg", en: "Mix Kabab (Kilo)", ar: "كيلو كباب مشكل", price: "" },
+  ]},
+  { section: "Pakistani Food", items: [
+    { id: "shanwari_full", en: "Shanwari Karahi Full", ar: "شنواري ساج", price: "" },
+    { id: "shanwari_namkeen", en: "Shanwari Namkeen Karahi", ar: "شنواري نمكين ساج", price: "" },
+    { id: "shanwari_special", en: "Shanwari Special Karahi", ar: "شنواري ساج خاص", price: "" },
+    { id: "pk_chicken_namkeen", en: "Chicken Namkeen Karahi", ar: "دجاج نمكين ساج", price: "" },
+    { id: "pk_white_karahi", en: "Chicken White Karahi", ar: "قِشطه ساج", price: "" },
+    { id: "pk_chicken_seekh", en: "Chicken Seekh Kabab", ar: "ساج سيخ كباب", price: "" },
+    { id: "daal_mash", en: "Daal Mash", ar: "دال ماش", price: "10.00" },
+    { id: "daal_chana", en: "Daal Chana", ar: "دال شنة", price: "10.00" },
+    { id: "aloo_keema", en: "Aloo Keema", ar: "آلو قيمة", price: "" },
+    { id: "aloo_palak", en: "Aloo Palak", ar: "أرز بالخضار", price: "10.00" },
+    { id: "mix_veg_pk", en: "Mix Vegetable", ar: "أرز صيني", price: "10.00" },
+    { id: "mutka_biryani_full", en: "Mutka Biryani Full", ar: "متكه برياني كامل", price: "64.00" },
+    { id: "mutka_biryani_quarter", en: "Mutka Biryani Quarter", ar: "متكه برياني ربع", price: "16.00" },
+    { id: "beef_biryani_kg", en: "Beef Biryani (Kilo)", ar: "بيف برياني كيلو", price: "74.00" },
+    { id: "beef_biryani_half", en: "Beef Biryani (Half Kilo)", ar: "بيف برياني نص كيلو", price: "37.00" },
+    { id: "beef_pulao_kg", en: "Beef Pulao (Kilo)", ar: "بيف پلو كيلو", price: "70.00" },
+    { id: "beef_pulao_half", en: "Beef Pulao (Half Kilo)", ar: "بيف پلو نص كيلو", price: "35.00" },
+    { id: "mutka_biryani_half", en: "Mutka Biryani Half", ar: "متكه برياني نص", price: "32.00" },
+  ]},
+  { section: "Salads", items: [
+    { id: "fresh_salad", en: "Fresh Salad", ar: "سلطة طازجة", price: "7.00" },
+    { id: "russian_salad", en: "Russian Salad", ar: "سلطة روسية", price: "12.00" },
+    { id: "raita", en: "Raita", ar: "رايتا", price: "5.00" },
+    { id: "veg_basket", en: "Vegetable Basket", ar: "سلة خضار", price: "7.00" },
+  ]},
+  { section: "Burgers & Sandwiches", items: [
+    { id: "cheese_sandwich", en: "Cheese Sandwich", ar: "ساندويتش جبنة", price: "4.00" },
+    { id: "club_sandwich", en: "Club Sandwich", ar: "ساندويتش كلوب", price: "4.00" },
+    { id: "chicken_sandwich", en: "Chicken Sandwich", ar: "ساندويتش دجاج", price: "4.00" },
+    { id: "cheese_burger", en: "Cheese Burger", ar: "تشيز برجر", price: "8.00" },
+    { id: "chicken_burger", en: "Chicken Burger", ar: "برجر دجاج", price: "7.00" },
+    { id: "beef_burger", en: "Beef Burger", ar: "برجر لحم", price: "8.00" },
+    { id: "shami_kabab_sw", en: "Shami Kabab", ar: "شامي كباب", price: "10.00" },
+  ]},
+  { section: "Afghani Food", items: [
+    { id: "kabuli_pulao", en: "Kabuli Pulao Simple", ar: "كابلي پالؤ ساده", price: "" },
+    { id: "afghani_kabab", en: "Afghani Kabab Boti", ar: "كباب بوتي أفغاني", price: "" },
+    { id: "afghani_achar", en: "Afghani Achar Karahi", ar: "كراهي آچار أفغاني", price: "" },
+    { id: "mantu", en: "Mantu", ar: "منتو", price: "" },
+    { id: "uzbek_pulao", en: "Uzbek Pulao", ar: "اوزبكي پلاؤ", price: "" },
+    { id: "rosht_pulao", en: "Rosht Namkeen Pulao", ar: "روشت نمکین پلاو", price: "" },
+    { id: "kofta_kabab", en: "Kofta Kabab", ar: "کوفته کباب", price: "" },
+    { id: "raishmi_kabab", en: "Raishmi Kabab", ar: "ریشمی کباب", price: "" },
+    { id: "shami_kabab_af", en: "Shami Kabab", ar: "شامی کباب", price: "" },
+    { id: "chicken_kabab_af", en: "Chicken Kabab", ar: "كباب دجاج", price: "" },
+    { id: "awsal_chicken", en: "Awsal Chicken", ar: "دجاج اوصال", price: "" },
+    { id: "chapli_kabab_af", en: "Chapli Kabab", ar: "چپلی کباب", price: "" },
+    { id: "ash_soup", en: "Ash Soup", ar: "آش سوپ", price: "" },
+    { id: "karahi_shinwari", en: "Karahi Shinwari", ar: "كراهي شنواري", price: "" },
+    { id: "afghani_chaat", en: "Afghani Chaat", ar: "افغانی چاٹ", price: "" },
+  ]},
+  { section: "Naan & Roti", items: [
+    { id: "roghni_naan", en: "Roghni Naan", ar: "رغنى نان", price: "3.00" },
+    { id: "kulcha_naan", en: "Kulcha Naan", ar: "کلچہ نان", price: "3.00" },
+    { id: "garlic_naan", en: "Garlic Naan", ar: "گارلك نان", price: "3.00" },
+    { id: "tandoori_paratha", en: "Tandoori Paratha", ar: "تندوری پراٹھا", price: "2.00" },
+    { id: "afghani_naan", en: "Afghani Naan", ar: "افغانی نان", price: "2.00" },
+    { id: "sadaa_naan", en: "Sadaa Naan (Plain)", ar: "ساده نان", price: "1.00" },
+    { id: "khameeri_roti", en: "Khameeri Roti", ar: "خمیری روٹی", price: "1.00" },
+    { id: "chicken_cheese_naan", en: "Chicken Cheese Naan", ar: "نان دجاج بالجبن", price: "7.00" },
+  ]},
+  { section: "Beverages", items: [
+    { id: "sweet_lassi", en: "Sweet & Saltish Lassi", ar: "لاسي حلو ومالح", price: "8.00" },
+    { id: "mango_lassi", en: "Mango Lassi", ar: "لاسي مانجو", price: "8.00" },
+    { id: "lemonade", en: "Lemonade", ar: "عصير ليمون", price: "6.00" },
+    { id: "fresh_lime", en: "Fresh Lime Juice", ar: "عصير ليمون طازج", price: "6.00" },
+    { id: "seasonal_juice", en: "Fresh Seasonal Juice", ar: "عصير موسمية طازج", price: "7.00" },
+    { id: "pink_tea", en: "Pink Tea (Kashmiri)", ar: "شاي كشميري", price: "3.00" },
+    { id: "peach_ice_tea", en: "Peach Ice Tea", ar: "شاي مثلج بالخوخ", price: "3.00" },
+    { id: "doodh_pati", en: "Doodh Pati", ar: "دود باتي", price: "3.00" },
+    { id: "mango_juice", en: "Mango Juice", ar: "مانجو", price: "" },
+    { id: "strawberry_juice", en: "Strawberry Juice", ar: "فراولة", price: "13.00" },
+    { id: "guava_juice", en: "Guava Juice", ar: "جوافة", price: "" },
+    { id: "orange_juice", en: "Orange Juice", ar: "برتقال", price: "12.00" },
+    { id: "banana_juice", en: "Banana Juice", ar: "موز", price: "13.00" },
+    { id: "kiwi_juice", en: "Kiwi Juice", ar: "كيوي", price: "14.00" },
+    { id: "avocado_honey", en: "Avocado (Honey-Nuts)", ar: "أفوكادو (عسل-مكسرات)", price: "14.00" },
+    { id: "watermelon_juice", en: "Watermelon Juice", ar: "بطيخ", price: "14.00" },
+    { id: "pineapple_juice", en: "Pineapple Juice", ar: "أناناس", price: "14.00" },
+    { id: "lemon_mint", en: "Lemon Mint", ar: "ليمون نعناع", price: "10.00" },
+    { id: "pinky_rose", en: "Pinky Rose", ar: "بينكي روز", price: "18.00" },
+    { id: "banana_nuts", en: "Banana with Nuts", ar: "موز بالمكسرات", price: "18.00" },
+    { id: "power_gal", en: "Power Gal", ar: "باور الجال", price: "18.00" },
+    { id: "avocado_mango", en: "Avocado with Mango", ar: "أفوكادو المانجو", price: "16.00" },
+    { id: "lavender_lemon", en: "Lavender Lemon", ar: "لافندر ليمون", price: "16.00" },
+    { id: "simple_chai", en: "Simple Chai", ar: "سادہ چائے", price: "2.00" },
+    { id: "sparkling_water", en: "Sparkling Water", ar: "مياه غازية", price: "3.00" },
+    { id: "water", en: "Water", ar: "ماء", price: "1.00" },
+  ]},
+  { section: "Sweets & Desserts", items: [
+    { id: "kulfa", en: "Kulfa Ice Cream", ar: "كلفي", price: "" },
+    { id: "choc_icecream", en: "Chocolate Ice Cream", ar: "شوكولاتة", price: "" },
+    { id: "strawberry_icecream", en: "Strawberry Ice Cream", ar: "فراولة", price: "" },
+    { id: "vanilla_icecream", en: "Vanilla Ice Cream", ar: "فانيليا", price: "" },
+    { id: "tutti_frutti", en: "Tutti Frutti Ice Cream", ar: "فواكه مشكلة", price: "12.00" },
+    { id: "pineapple_sundae", en: "Pineapple Sundae", ar: "صنداي أناناس", price: "14.00" },
+    { id: "pistachio_icecream", en: "Pistachio Ice Cream", ar: "فستق", price: "" },
+    { id: "custard", en: "Custard", ar: "كاسترد", price: "6.00" },
+  ]},
+];
+
+// State
+let selected = {};
+let currentFilter = "";
+
+function doLogin() {
+  const pin = document.getElementById('pin-input').value;
+  if (pin === STAFF_PIN) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadFromFirebase();
+    renderDate();
+  } else {
+    document.getElementById('login-error').textContent = 'Incorrect PIN. Try again.';
+  }
+}
+document.getElementById('pin-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+function doLogout() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('pin-input').value = '';
+}
+
+function renderDate() {
+  const d = new Date();
+  document.getElementById('today-date').textContent = d.toLocaleDateString('en-SA', { weekday:'long', day:'numeric', month:'long' });
+}
+
+function loadFromFirebase() {
+  db.ref('menu/available').once('value').then(snap => {
+    const data = snap.val() || {};
+    selected = data;
+    renderMenu();
+    updateCount();
+  });
+}
+
+function renderMenu(filter = "") {
+  const list = document.getElementById('menu-list');
+  list.innerHTML = '';
+  MENU.forEach(section => {
+    const filtered = section.items.filter(item =>
+      !filter ||
+      item.en.toLowerCase().includes(filter) ||
+      item.ar.includes(filter)
+    );
+    if (!filtered.length) return;
+    const sec = document.createElement('div');
+    sec.innerHTML = `<div class="section-header">${section.section}</div>
+      <div class="select-all-row">
+        <button class="mini-btn" onclick="selectAll('${section.section}')">All on</button>
+        <button class="mini-btn" onclick="deselectAll('${section.section}')">All off</button>
+      </div>`;
+    filtered.forEach(item => {
+      const on = selected[item.id] ? 'on' : '';
+      const row = document.createElement('div');
+      row.className = `dish-row ${on}`;
+      row.dataset.id = item.id;
+      row.dataset.section = section.section;
+      row.innerHTML = `
+        <div class="checkbox"><div class="checkmark"></div></div>
+        <div class="dish-info">
+          <div class="dish-name">${item.en}</div>
+          <div class="dish-name-ar">${item.ar}</div>
+        </div>
+        <div class="dish-price">${item.price ? item.price + ' ر.س' : ''}</div>`;
+      row.onclick = () => toggleRow(row, item.id);
+      sec.appendChild(row);
+    });
+    list.appendChild(sec);
+  });
+}
+
+function toggleRow(row, id) {
+  if (selected[id]) {
+    delete selected[id];
+    row.classList.remove('on');
+  } else {
+    selected[id] = true;
+    row.classList.add('on');
+  }
+  updateCount();
+}
+
+function selectAll(sectionName) {
+  const sec = MENU.find(s => s.section === sectionName);
+  if (!sec) return;
+  sec.items.forEach(item => selected[item.id] = true);
+  renderMenu(currentFilter);
+  updateCount();
+}
+
+function deselectAll(sectionName) {
+  const sec = MENU.find(s => s.section === sectionName);
+  if (!sec) return;
+  sec.items.forEach(item => delete selected[item.id]);
+  renderMenu(currentFilter);
+  updateCount();
+}
+
+function updateCount() {
+  const n = Object.keys(selected).length;
+  document.getElementById('count-pill').textContent = `${n} dish${n !== 1 ? 'es' : ''} on`;
+}
+
+function filterDishes(val) {
+  currentFilter = val.toLowerCase().trim();
+  renderMenu(currentFilter);
+}
+
+function saveMenu() {
+  const btn = document.getElementById('save-btn');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  // Build full dish data for menu page
+  const menuData = {};
+  MENU.forEach(section => {
+    section.items.forEach(item => {
+      if (selected[item.id]) {
+        menuData[item.id] = {
+          en: item.en,
+          ar: item.ar,
+          price: item.price,
+          section: section.section
+        };
+      }
+    });
+  });
+
+  db.ref('menu').set({
+    available: selected,
+    dishes: menuData,
+    updatedAt: new Date().toISOString()
+  }).then(() => {
+    btn.textContent = 'Update guest menu';
+    btn.disabled = false;
+    btn.classList.add('saved');
+    const toast = document.getElementById('toast');
+    toast.textContent = 'Menu updated — guests can see the changes now.';
+    setTimeout(() => { toast.textContent = ''; btn.classList.remove('saved'); }, 3000);
+  }).catch(err => {
+    btn.textContent = 'Update guest menu';
+    btn.disabled = false;
+    alert('Error saving. Check your Firebase config.');
+    console.error(err);
+  });
+}
+</script>
+</body>
+</html>
