@@ -1,0 +1,109 @@
+═══════════════════════════════════════════════════════════════
+  AL QAYSAR MENU SYSTEM - SIMPLE SUMMARY
+═══════════════════════════════════════════════════════════════
+
+📱 WHAT YOU HAVE:
+
+1. Customer Website
+   - Customers scan QR code
+   - See menu with prices
+   - Updates in real-time
+
+2. Staff Android App
+   - Staff select available dishes
+   - Click "Update menu"
+   - Changes appear on website instantly
+
+
+🔗 YOUR LINKS:
+
+Customer Menu (for QR code):
+https://qaysr-qr-menu-app.vercel.app/menu
+
+Staff Web Version:
+https://qaysr-qr-menu-app.vercel.app/staff
+(PIN: 1234)
+
+
+📱 BUILD APK TO SEND VIA WHATSAPP:
+
+Step 1 - Build APK (10 minutes):
+1. npm install -g eas-cli
+2. eas login (create free account at expo.dev)
+3. cd staff-app-expo
+4. eas build -p android --profile preview
+5. Wait 5-10 minutes
+6. Download APK file from link
+
+Step 2 - Send via WhatsApp:
+1. Open WhatsApp
+2. Send APK file to staff
+3. Staff opens APK
+4. Staff installs app
+5. Done! (No Expo Go needed!)
+
+Note: QR code only works with Expo Go app (for testing only)
+
+
+🎯 HOW IT WORKS:
+
+Staff App → Select dishes → Save → Firebase → Customer Website
+
+Simple as that!
+
+
+📋 DAILY USE:
+
+Morning:
+- Staff opens app
+- Enters PIN: 1234
+- Selects today's dishes
+- Clicks "Update guest menu"
+
+Customers:
+- Scan QR code
+- See menu
+- Order
+
+
+🔧 CHANGE PIN:
+
+Edit: staff-app-expo/App.js (line 30)
+Change: const STAFF_PIN = "1234";
+To: const STAFF_PIN = "your-pin";
+
+
+📁 YOUR FILES:
+
+menu.html          → Customer website
+staff.html         → Staff web version
+staff-app-expo/    → Android app
+vercel.json        → Website config
+START_HERE.md      → Quick guide
+README.md          → Full guide
+
+
+✅ NEXT STEPS:
+
+1. Test app: cd staff-app-expo && npm start
+2. Change PIN
+3. Build APK: eas build -p android --profile preview
+4. Install on staff phones
+5. Create QR code for tables
+6. Go live!
+
+
+🆘 PROBLEMS?
+
+App won't start:
+cd staff-app-expo && npm install && npm start
+
+Can't build APK:
+npm install -g eas-cli
+eas login
+eas build -p android --profile preview
+
+
+═══════════════════════════════════════════════════════════════
+  THAT'S IT! SIMPLE AND EASY!
+═══════════════════════════════════════════════════════════════
