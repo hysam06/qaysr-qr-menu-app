@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upload Dish Images - Al Qaysar</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+  
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 28px; margin-bottom: 10px; color: #2d3436; }
+  .subtitle { color: #636e72; margin-bottom: 30px; }
+  
+  .login-section { background: #fff; padding: 30px; border-radius: 12px; max-width: 400px; margin: 100px auto; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  .login-section h2 { margin-bottom: 20px; color: #2d3436; }
+  .login-section input { width: 100%; padding: 12px; border: 1px solid #dfe6e9; border-radius: 8px; margin-bottom: 15px; font-size: 15px; }
+  .login-section button { width: 100%; padding: 12px; background: #3d9991; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .login-section button:hover { background: #2d7a73; }
+  .error { color: #d63031; font-size: 14px; margin-top: 10px; }
+  
+  .main-content { display: none; }
+  
+  .search-bar { background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .search-bar input { width: 100%; padding: 12px 16px; border: 1px solid #dfe6e9; border-radius: 8px; font-size: 15px; }
+  
+  .dishes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+  
+  .dish-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+  .dish-image-preview { width: 100%; height: 200px; background: linear-gradient(135deg, #3d9991 0%, #2d7a73 100%); display: flex; align-items: center; justify-content: center; font-size: 48px; color: rgba(255,255,255,0.3); position: relative; overflow: hidden; }
+  .dish-image-preview img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+  
+  .dish-info { padding: 16px; }
+  .dish-name { font-size: 16px; font-weight: 600; color: #2d3436; margin-bottom: 4px; }
+  .dish-name-ar { font-size: 13px; color: #636e72; direction: rtl; margin-bottom: 12px; }
+  
+  .upload-section { display: flex; gap: 10px; align-items: center; }
+  .file-input-wrapper { position: relative; flex: 1; }
+  .file-input-wrapper input[type="file"] { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .file-input-label { display: block; padding: 10px 16px; background: #f8f9fa; border: 1px solid #dfe6e9; border-radius: 8px; text-align: center; font-size: 14px; color: #636e72; cursor: pointer; }
+  .file-input-label:hover { background: #e9ecef; }
+  
+  .upload-btn { padding: 10px 20px; background: #3d9991; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .upload-btn:hover { background: #2d7a73; }
+  .upload-btn:disabled { background: #b2bec3; cursor: not-allowed; }
+  
+  .remove-btn { padding: 10px 20px; background: #d63031; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .remove-btn:hover { background: #c0392b; }
+  
+  .status { font-size: 12px; color: #636e72; margin-top: 8px; }
+  .status.success { color: #00b894; }
+  .status.error { color: #d63031; }
+  
+  .progress { width: 100%; height: 4px; background: #dfe6e9; border-radius: 2px; margin-top: 8px; overflow: hidden; display: none; }
+  .progress-bar { height: 100%; background: #3d9991; transition: width 0.3s; }
+  
+  .logout-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #fff; border: 1px solid #dfe6e9; border-radius: 8px; cursor: pointer; font-size: 14px; color: #636e72; }
+  .logout-btn:hover { background: #f8f9fa; }
+</style>
+</head>
+<body>
+
+<div class="login-section" id="login-section">
+  <h2>Staff Login</h2>
+  <p style="color: #636e72; margin-bottom: 20px;">Enter PIN to upload dish images</p>
+  <input type="password" id="pin-input" placeholder="Enter staff PIN" maxlength="10">
+  <button onclick="login()">Login</button>
+  <div class="error" id="login-error"></div>
+</div>
+
+<div class="main-content" id="main-content">
+  <button class="logout-btn" onclick="logout()">Logout</button>
+  
+  <div class="container">
+    <h1>Upload Dish Images</h1>
+    <p class="subtitle">Add beautiful photos to your menu items</p>
+    
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Search dishes..." oninput="filterDishes(this.value)">
+    </div>
+    
+    <div class="dishes-grid" id="dishes-grid">
+      <div style="text-align: center; padding: 60px; grid-column: 1/-1; color: #636e72;">
+        Loading dishes...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCxvxgkzALj5Mip7GHAJBK9SYnNm9qO0KI",
+  authDomain: "alqaysar-menu.firebaseapp.com",
+  databaseURL: "https://alqaysar-menu-default-rtdb.firebaseio.com",
+  projectId: "alqaysar-menu",
+  storageBucket: "alqaysar-menu.firebasestorage.app",
+  messagingSenderId: "181160036262",
+  appId: "1:181160036262:web:d26f2d2504b880807bb167",
+  measurementId: "G-3ZTYG4EHMT"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const storage = firebase.storage();
+
+const STAFF_PIN = "1234";
+let allDishes = [];
+
+function login() {
+  const pin = document.getElementById('pin-input').value;
+  if (pin === STAFF_PIN) {
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    loadDishes();
+  } else {
+    document.getElementById('login-error').textContent = 'Incorrect PIN';
+  }
+}
+
+function logout() {
+  document.getElementById('login-section').style.display = 'block';
+  document.getElementById('main-content').style.display = 'none';
+  document.getElementById('pin-input').value = '';
+}
+
+function loadDishes() {
+  db.ref('menu/dishes').on('value', snap => {
+    const data = snap.val();
+    if (!data) {
+      document.getElementById('dishes-grid').innerHTML = '<div style="text-align: center; padding: 60px; grid-column: 1/-1; color: #636e72;">No dishes found. Please add dishes from the staff app first.</div>';
+      return;
+    }
+    
+    allDishes = Object.entries(data).map(([id, dish]) => ({ id, ...dish }));
+    renderDishes(allDishes);
+  });
+}
+
+function renderDishes(dishes) {
+  const grid = document.getElementById('dishes-grid');
+  grid.innerHTML = dishes.map(dish => `
+    <div class="dish-card" id="card-${dish.id}">
+      <div class="dish-image-preview" id="preview-${dish.id}">
+        ${dish.imageUrl ? `<img src="${dish.imageUrl}" alt="${dish.en}">` : '🍽️'}
+      </div>
+      <div class="dish-info">
+        <div class="dish-name">${dish.en}</div>
+        <div class="dish-name-ar">${dish.ar}</div>
+        <div class="upload-section">
+          <div class="file-input-wrapper">
+            <input type="file" id="file-${dish.id}" accept="image/*" onchange="handleFileSelect('${dish.id}', this)">
+            <label class="file-input-label" for="file-${dish.id}">Choose Image</label>
+          </div>
+          <button class="upload-btn" id="upload-${dish.id}" onclick="uploadImage('${dish.id}')" disabled>Upload</button>
+          ${dish.imageUrl ? `<button class="remove-btn" onclick="removeImage('${dish.id}')">Remove</button>` : ''}
+        </div>
+        <div class="progress" id="progress-${dish.id}">
+          <div class="progress-bar" id="progress-bar-${dish.id}"></div>
+        </div>
+        <div class="status" id="status-${dish.id}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+let selectedFiles = {};
+
+function handleFileSelect(dishId, input) {
+  if (input.files && input.files[0]) {
+    selectedFiles[dishId] = input.files[0];
+    document.getElementById(`upload-${dishId}`).disabled = false;
+    
+    // Preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const preview = document.getElementById(`preview-${dishId}`);
+      preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function uploadImage(dishId) {
+  const file = selectedFiles[dishId];
+  if (!file) return;
+  
+  const uploadBtn = document.getElementById(`upload-${dishId}`);
+  const status = document.getElementById(`status-${dishId}`);
+  const progress = document.getElementById(`progress-${dishId}`);
+  const progressBar = document.getElementById(`progress-bar-${dishId}`);
+  
+  uploadBtn.disabled = true;
+  status.textContent = 'Uploading...';
+  status.className = 'status';
+  progress.style.display = 'block';
+  
+  // Upload to Firebase Storage
+  const storageRef = storage.ref(`dish-images/${dishId}-${Date.now()}.jpg`);
+  const uploadTask = storageRef.put(file);
+  
+  uploadTask.on('state_changed',
+    (snapshot) => {
+      const percent = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+      progressBar.style.width = percent + '%';
+    },
+    (error) => {
+      status.textContent = 'Upload failed: ' + error.message;
+      status.className = 'status error';
+      uploadBtn.disabled = false;
+      progress.style.display = 'none';
+    },
+    () => {
+      uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+        // Save URL to database
+        db.ref(`menu/dishes/${dishId}/imageUrl`).set(downloadURL).then(() => {
+          status.textContent = 'Image uploaded successfully!';
+          status.className = 'status success';
+          progress.style.display = 'none';
+          delete selectedFiles[dishId];
+          
+          // Reload to show remove button
+          setTimeout(() => loadDishes(), 1000);
+        });
+      });
+    }
+  );
+}
+
+function removeImage(dishId) {
+  if (!confirm('Remove this image?')) return;
+  
+  const status = document.getElementById(`status-${dishId}`);
+  status.textContent = 'Removing...';
+  status.className = 'status';
+  
+  // Get current image URL to delete from storage
+  db.ref(`menu/dishes/${dishId}/imageUrl`).once('value').then(snap => {
+    const imageUrl = snap.val();
+    
+    // Remove from database
+    db.ref(`menu/dishes/${dishId}/imageUrl`).remove().then(() => {
+      // Try to delete from storage (optional, may fail if URL format changed)
+      if (imageUrl) {
+        try {
+          storage.refFromURL(imageUrl).delete().catch(() => {});
+        } catch (e) {}
+      }
+      
+      status.textContent = 'Image removed';
+      status.className = 'status success';
+      
+      // Reload
+      setTimeout(() => loadDishes(), 1000);
+    });
+  });
+}
+
+function filterDishes(query) {
+  if (!query.trim()) {
+    renderDishes(allDishes);
+    return;
+  }
+  
+  const filtered = allDishes.filter(dish =>
+    dish.en.toLowerCase().includes(query.toLowerCase()) ||
+    dish.ar.includes(query)
+  );
+  
+  renderDishes(filtered);
+}
+
+document.getElementById('pin-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+</script>
+</body>
+</html>
