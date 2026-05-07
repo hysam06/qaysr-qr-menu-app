@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual Image Mapper - Al Qaysar</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #f5f5f5; min-height: 100vh; padding: 20px; }
+  
+  .container { max-width: 1400px; margin: 0 auto; }
+  
+  h1 { color: #DC143C; margin-bottom: 8px; font-size: 32px; font-weight: 800; }
+  .subtitle { color: #ccc; margin-bottom: 24px; font-size: 16px; }
+  
+  .pin-section { background: #2a2a2a; padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #333; }
+  .pin-input { padding: 12px 16px; font-size: 16px; border: 2px solid #DC143C; border-radius: 8px; width: 200px; margin-right: 12px; background: #1a1a1a; color: #fff; }
+  .btn { padding: 12px 24px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; transition: all 0.3s; }
+  .btn-primary { background: #DC143C; color: white; }
+  .btn-primary:hover { background: #8B0000; transform: translateY(-2px); }
+  .btn-success { background: #10b981; color: white; margin-top: 24px; width: 100%; font-size: 18px; padding: 16px; }
+  .btn-success:hover { background: #059669; }
+  
+  .content { display: none; }
+  .content.active { display: block; }
+  
+  .category-selector { background: #2a2a2a; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #333; }
+  .category-selector select { padding: 12px; font-size: 16px; border: 2px solid #DC143C; border-radius: 8px; background: #1a1a1a; color: #fff; width: 100%; max-width: 400px; font-weight: 600; }
+  
+  .mapping-container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  
+  .dishes-panel, .images-panel { background: #2a2a2a; padding: 24px; border-radius: 12px; border: 2px solid #333; }
+  
+  h2 { color: #FFD700; margin-bottom: 16px; font-size: 24px; font-weight: 800; }
+  
+  .dish-list, .image-list { display: flex; flex-direction: column; gap: 12px; max-height: 600px; overflow-y: auto; }
+  
+  .dish-item { background: #1a1a1a; padding: 16px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.3s; }
+  .dish-item:hover { border-color: #DC143C; }
+  .dish-item.selected { border-color: #FFD700; background: #2a2a2a; }
+  .dish-item.has-image { opacity: 0.5; }
+  
+  .dish-name { font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .dish-ar { font-size: 14px; color: #ccc; direction: rtl; }
+  .dish-current-image { font-size: 12px; color: #10b981; margin-top: 8px; }
+  
+  .image-item { background: #1a1a1a; padding: 12px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.3s; display: flex; align-items: center; gap: 12px; }
+  .image-item:hover { border-color: #DC143C; }
+  .image-item.selected { border-color: #FFD700; background: #2a2a2a; }
+  
+  .image-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; background: #333; }
+  .image-name { font-size: 14px; color: #fff; word-break: break-all; flex: 1; }
+  
+  .assign-btn { background: #DC143C; color: white; padding: 12px 32px; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; margin: 24px auto; display: block; }
+  .assign-btn:hover { background: #8B0000; }
+  .assign-btn:disabled { background: #555; cursor: not-allowed; }
+  
+  .status { padding: 16px; border-radius: 8px; margin: 16px 0; font-weight: 600; }
+  .status.error { background: #fee; color: #c00; }
+  .status.success { background: #efe; color: #060; }
+  .status.info { background: #eef; color: #006; }
+  
+  .stats { background: #2a2a2a; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 2px solid #333; display: flex; gap: 24px; justify-content: space-around; }
+  .stat { text-align: center; }
+  .stat-number { font-size: 36px; font-weight: 800; color: #FFD700; }
+  .stat-label { font-size: 14px; color: #ccc; margin-top: 4px; }
+  
+  @media (max-width: 1024px) {
+    .mapping-container { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🎨 Manual Image Mapper</h1>
+  <p class="subtitle">Manually assign images to dishes that weren't auto-matched</p>
+  
+  <!-- PIN Protection -->
+  <div class="pin-section" id="pin-section">
+    <label for="pin" style="color: #fff; font-weight: 600;">Enter PIN to continue:</label><br><br>
+    <input type="password" id="pin" class="pin-input" placeholder="Enter PIN">
+    <button class="btn btn-primary" onclick="checkPin()">Unlock</button>
+    <div id="pin-error"></div>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="content" id="main-content">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-number" id="total-dishes">0</div>
+        <div class="stat-label">Total Dishes</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number" id="dishes-with-images">0</div>
+        <div class="stat-label">With Images</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number" id="dishes-without-images">0</div>
+        <div class="stat-label">Need Images</div>
+      </div>
+    </div>
+    
+    <div class="category-selector">
+      <label for="category-select" style="color: #fff; font-weight: 600; display: block; margin-bottom: 12px;">Select Category:</label>
+      <select id="category-select" onchange="loadCategory()">
+        <option value="">-- Choose a category --</option>
+      </select>
+    </div>
+    
+    <div class="mapping-container">
+      <div class="dishes-panel">
+        <h2>📋 Dishes</h2>
+        <div class="dish-list" id="dish-list">
+          <p style="color: #999;">Select a category to see dishes</p>
+        </div>
+      </div>
+      
+      <div class="images-panel">
+        <h2>🖼️ Available Images</h2>
+        <div class="image-list" id="image-list">
+          <p style="color: #999;">Select a category to see images</p>
+        </div>
+      </div>
+    </div>
+    
+    <button class="assign-btn" id="assign-btn" onclick="assignImage()" disabled>
+      ⬅️ Assign Selected Image to Selected Dish
+    </button>
+    
+    <button class="btn btn-success" onclick="saveAllMappings()">
+      💾 Save All Mappings to Database
+    </button>
+    
+    <div id="status"></div>
+  </div>
+</div>
+
+<script>
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyCxvxgkzALj5Mip7GHAJBK9SYnNm9qO0KI",
+  authDomain: "alqaysar-menu.firebaseapp.com",
+  databaseURL: "https://alqaysar-menu-default-rtdb.firebaseio.com",
+  projectId: "alqaysar-menu",
+  storageBucket: "alqaysar-menu.firebasestorage.app",
+  messagingSenderId: "181160036262",
+  appId: "1:181160036262:web:d26f2d2504b880807bb167",
+  measurementId: "G-3ZTYG4EHMT"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Available images by folder
+const AVAILABLE_IMAGES = {
+  "bbq": ["cheese steak.png", "onion steal.png"],
+  "beverages": [],
+  "burger and sanwiches": [],
+  "naan roti": [],
+  "pakistani food": [],
+  "afghani food": [],
+  "sweets": []
+};
+
+let allDishes = {};
+let currentCategory = "";
+let selectedDish = null;
+let selectedImage = null;
+let pendingMappings = {};
+
+function checkPin() {
+  const pin = document.getElementById('pin').value;
+  if (pin === '1234') {
+    document.getElementById('pin-section').style.display = 'none';
+    document.getElementById('main-content').classList.add('active');
+    loadDishes();
+  } else {
+    document.getElementById('pin-error').innerHTML = '<div class="status error">❌ Incorrect PIN</div>';
+  }
+}
+
+function loadDishes() {
+  db.ref('menu/dishes').once('value', snap => {
+    const dishes = snap.val();
+    if (!dishes) {
+      showStatus('No dishes found in database', 'error');
+      return;
+    }
+    
+    allDishes = dishes;
+    populateCategorySelector();
+    updateStats();
+  });
+}
+
+function populateCategorySelector() {
+  const categories = {};
+  Object.values(allDishes).forEach(dish => {
+    categories[dish.section] = true;
+  });
+  
+  const select = document.getElementById('category-select');
+  Object.keys(categories).sort().forEach(cat => {
+    const option = document.createElement('option');
+    option.value = cat;
+    option.textContent = cat;
+    select.appendChild(option);
+  });
+}
+
+function updateStats() {
+  const total = Object.keys(allDishes).length;
+  let withImages = 0;
+  
+  Object.values(allDishes).forEach(dish => {
+    if (dish.imageUrl) withImages++;
+  });
+  
+  document.getElementById('total-dishes').textContent = total;
+  document.getElementById('dishes-with-images').textContent = withImages;
+  document.getElementById('dishes-without-images').textContent = total - withImages;
+}
+
+function loadCategory() {
+  currentCategory = document.getElementById('category-select').value;
+  if (!currentCategory) return;
+  
+  selectedDish = null;
+  selectedImage = null;
+  updateAssignButton();
+  
+  // Load dishes for this category
+  const dishList = document.getElementById('dish-list');
+  const categoryDishes = Object.entries(allDishes).filter(([id, dish]) => dish.section === currentCategory);
+  
+  if (categoryDishes.length === 0) {
+    dishList.innerHTML = '<p style="color: #999;">No dishes in this category</p>';
+    return;
+  }
+  
+  dishList.innerHTML = categoryDishes.map(([id, dish]) => `
+    <div class="dish-item ${dish.imageUrl ? 'has-image' : ''}" onclick="selectDish('${id}')">
+      <div class="dish-name">${dish.en}</div>
+      <div class="dish-ar">${dish.ar}</div>
+      ${dish.imageUrl ? `<div class="dish-current-image">✅ Has image</div>` : ''}
+      ${pendingMappings[id] ? `<div class="dish-current-image">🔄 Pending: ${pendingMappings[id]}</div>` : ''}
+    </div>
+  `).join('');
+  
+  // Load images for this category
+  loadImagesForCategory();
+}
+
+function loadImagesForCategory() {
+  const imageList = document.getElementById('image-list');
+  
+  // Map category names to folder names
+  const folderMap = {
+    "BBQ": "bbq",
+    "Beverages": "beverages",
+    "Burgers & Sandwiches": "burger and sanwiches",
+    "Naan & Roti": "naan roti",
+    "Pakistani Food": "pakistani food",
+    "Afghani Food": "afghani food",
+    "Sweets & Desserts": "sweets"
+  };
+  
+  const folderName = folderMap[currentCategory];
+  if (!folderName) {
+    imageList.innerHTML = '<p style="color: #999;">This category has auto-mapped images</p>';
+    return;
+  }
+  
+  // For now, show a file input to browse local images
+  imageList.innerHTML = `
+    <p style="color: #FFD700; margin-bottom: 16px;">📁 Browse images from: food-images/${folderName}/</p>
+    <p style="color: #ccc; font-size: 14px; line-height: 1.6;">
+      To manually map images:<br>
+      1. Note the dish name you want to assign an image to<br>
+      2. Go to the <code>food-images/${folderName}/</code> folder<br>
+      3. Rename the image file to match the dish name exactly<br>
+      4. Run <code>link-local-images.html</code> again to auto-map<br><br>
+      Or use <code>upload-images.html</code> to upload directly to Firebase Storage.
+    </p>
+  `;
+}
+
+function selectDish(dishId) {
+  selectedDish = dishId;
+  
+  // Update UI
+  document.querySelectorAll('.dish-item').forEach(el => el.classList.remove('selected'));
+  event.target.closest('.dish-item').classList.add('selected');
+  
+  updateAssignButton();
+}
+
+function selectImage(imagePath) {
+  selectedImage = imagePath;
+  
+  // Update UI
+  document.querySelectorAll('.image-item').forEach(el => el.classList.remove('selected'));
+  event.target.closest('.image-item').classList.add('selected');
+  
+  updateAssignButton();
+}
+
+function updateAssignButton() {
+  const btn = document.getElementById('assign-btn');
+  btn.disabled = !(selectedDish && selectedImage);
+}
+
+function assignImage() {
+  if (!selectedDish || !selectedImage) return;
+  
+  pendingMappings[selectedDish] = selectedImage;
+  showStatus(`✅ Assigned ${selectedImage} to ${allDishes[selectedDish].en}`, 'success');
+  
+  // Refresh the dish list to show pending mapping
+  loadCategory();
+}
+
+function saveAllMappings() {
+  if (Object.keys(pendingMappings).length === 0) {
+    showStatus('No pending mappings to save', 'info');
+    return;
+  }
+  
+  if (!confirm(`Save ${Object.keys(pendingMappings).length} image mappings to database?`)) {
+    return;
+  }
+  
+  const updates = {};
+  Object.entries(pendingMappings).forEach(([dishId, imagePath]) => {
+    updates[`menu/dishes/${dishId}/imageUrl`] = imagePath;
+  });
+  
+  db.ref().update(updates)
+    .then(() => {
+      showStatus(`✅ Successfully saved ${Object.keys(pendingMappings).length} image mappings!`, 'success');
+      pendingMappings = {};
+      loadDishes(); // Reload to update stats
+    })
+    .catch(error => {
+      showStatus('❌ Error saving mappings: ' + error.message, 'error');
+    });
+}
+
+function showStatus(message, type) {
+  const status = document.getElementById('status');
+  status.innerHTML = `<div class="status ${type}">${message}</div>`;
+  setTimeout(() => status.innerHTML = '', 5000);
+}
+</script>
+</body>
+</html>

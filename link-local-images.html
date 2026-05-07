@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Link Local Images - Al Qaysar</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+  
+  .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 16px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  
+  h1 { color: #333; margin-bottom: 8px; font-size: 32px; }
+  .subtitle { color: #666; margin-bottom: 24px; font-size: 16px; }
+  
+  .pin-section { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
+  .pin-input { padding: 12px 16px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; width: 200px; margin-right: 12px; }
+  .btn { padding: 12px 24px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+  .btn-primary { background: #667eea; color: white; }
+  .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+  .btn-success { background: #10b981; color: white; }
+  .btn-success:hover { background: #059669; }
+  
+  .status { padding: 16px; border-radius: 8px; margin: 16px 0; font-weight: 600; }
+  .status.error { background: #fee; color: #c00; }
+  .status.success { background: #efe; color: #060; }
+  .status.info { background: #eef; color: #006; }
+  
+  .content { display: none; }
+  .content.active { display: block; }
+  
+  .mapping-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 24px; }
+  
+  .dish-card { background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 12px; padding: 16px; }
+  .dish-card.matched { border-color: #10b981; background: #f0fdf4; }
+  .dish-card.unmatched { border-color: #ef4444; background: #fef2f2; }
+  
+  .dish-name { font-weight: 700; color: #333; margin-bottom: 4px; font-size: 16px; }
+  .dish-section { font-size: 12px; color: #666; margin-bottom: 8px; }
+  .dish-image-preview { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-top: 8px; background: #e9ecef; }
+  .image-path { font-size: 12px; color: #10b981; margin-top: 8px; word-break: break-all; }
+  .no-image { font-size: 12px; color: #ef4444; margin-top: 8px; }
+  
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; }
+  .stat-number { font-size: 36px; font-weight: 800; margin-bottom: 4px; }
+  .stat-label { font-size: 14px; opacity: 0.9; }
+  
+  .progress-bar { width: 100%; height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; margin: 16px 0; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.3s; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🖼️ Link Local Images to Menu</h1>
+  <p class="subtitle">Automatically match food images from the food-images folder to your menu dishes</p>
+  
+  <!-- PIN Protection -->
+  <div class="pin-section" id="pin-section">
+    <label for="pin">Enter PIN to continue:</label><br><br>
+    <input type="password" id="pin" class="pin-input" placeholder="Enter PIN">
+    <button class="btn btn-primary" onclick="checkPin()">Unlock</button>
+    <div id="pin-error"></div>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="content" id="main-content">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-number" id="total-dishes">0</div>
+        <div class="stat-label">Total Dishes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="matched-count">0</div>
+        <div class="stat-label">Images Matched</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="unmatched-count">0</div>
+        <div class="stat-label">No Image Found</div>
+      </div>
+    </div>
+    
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+    </div>
+    
+    <button class="btn btn-success" onclick="updateDatabase()" style="width: 100%; font-size: 18px; padding: 16px;">
+      ✅ Update Database with Image Links
+    </button>
+    
+    <div id="status"></div>
+    
+    <h2 style="margin-top: 32px; margin-bottom: 16px; color: #333;">Image Mapping Preview</h2>
+    <div class="mapping-grid" id="mapping-grid"></div>
+  </div>
+</div>
+
+<script>
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyCxvxgkzALj5Mip7GHAJBK9SYnNm9qO0KI",
+  authDomain: "alqaysar-menu.firebaseapp.com",
+  databaseURL: "https://alqaysar-menu-default-rtdb.firebaseio.com",
+  projectId: "alqaysar-menu",
+  storageBucket: "alqaysar-menu.firebasestorage.app",
+  messagingSenderId: "181160036262",
+  appId: "1:181160036262:web:d26f2d2504b880807bb167",
+  measurementId: "G-3ZTYG4EHMT"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Image mapping based on folder structure
+const IMAGE_MAPPINGS = {
+  // Starters / Appetizers
+  "starters": {
+    "chicken wings": "chicken wings.png",
+    "chicken spring roll": "chciken spring roll.png",
+    "prawn spring roll": "prawn spring roll.png",
+    "prawn tail": "prawn tail.png",
+    "vegetable spring roll": "vegetable spring roll.png",
+    "fish finger": "fish finger .png"
+  },
+  
+  // Eidam (Stews)
+  "eidam": {
+    "meat stew": "meat stew.png",
+    "mixed stew": "mixed  stew.png",
+    "mixed veg stew": "mixed veg stew.png",
+    "molokhia stew": "molokhia stew.png",
+    "moshakan stew": "moshakan stew.png",
+    "okra stew": "okra stew.png",
+    "pasta stew": "pasta stew.png",
+    "potato stew": "potato stew.png"
+  },
+  
+  // Grills
+  "grills": {
+    "chicken kebab": "chicken kebab.png",
+    "chicken kebab sandwich": "chicken kebab sandwich.png",
+    "chicken shish kebab": "chicken shish kebab.png",
+    "chicken thighs": "chicken thighs.png",
+    "kebab platter": "kebab plater.png",
+    "meat kebab": "meat kebab.png",
+    "meat kebab sandwich": "meat kebab sandwich.png"
+  },
+  
+  // Chinese Items
+  "chinease items": {
+    "chicken manchurian": "chicken manchurian.png",
+    "fried rice": "fried rice.png",
+    "noodles": "noodles .png",
+    "sweet and sour chicken": "sweetand sour chicken.png"
+  },
+  
+  // Seafood
+  "seafood": {
+    "fried fish meal": "fried fish meal.png",
+    "fried shrimp meal": "fried shrimp meal.png",
+    "grilled fish meal": "grilled fish meal.png",
+    "grilled shrimp meal": "grilled shrimp meal.png",
+    "tandoori masala fish": "tandoori masala fish.png",
+    "tandoori masala prawn": "tandoori masala prawn.png"
+  },
+  
+  // Saudi Food
+  "saudi food": {
+    "charcoal plain rice": "charcoal plain rice .png",
+    "fried chicken with rice": "fried chicken with rice .png",
+    "grilled chicken plain": "grilled chicken plain.png"
+  },
+  
+  // Meat
+  "meat": {
+    "kabsa": "Kabsa.png"
+  },
+  
+  // Rice
+  "Rice": {
+    "bukhari rice": "bukhari rice .png",
+    "chicken biryani": "chicken biriyani.png",
+    "chinese rice": "chinease rice .png",
+    "fried rice": "fried rice .png",
+    "kabuli rice": "kabuli rice.png",
+    "peshawari rice": "peshawari rice.png",
+    "plain rice": "plain rice.png",
+    "vegetable rice": "vegetable rice .png"
+  },
+  
+  // Karahi Station
+  "karahi station": {
+    "chicken karahi": "chicken karahi .png",
+    "chicken marahi karahi": "chicken marahi karahi.png",
+    "chicken namkeen karahi": "chicken namkeen karahi.png",
+    "chicken white karahi": "chicken white karahi.png"
+  },
+  
+  // Salad
+  "salad": {
+    "fresh salad": "fresh salad.png",
+    "raita": "raita.png",
+    "russian salad": "russain salad.png"
+  }
+};
+
+let allDishes = {};
+let mappedDishes = {};
+
+function checkPin() {
+  const pin = document.getElementById('pin').value;
+  if (pin === '1234') {
+    document.getElementById('pin-section').style.display = 'none';
+    document.getElementById('main-content').classList.add('active');
+    loadDishes();
+  } else {
+    document.getElementById('pin-error').innerHTML = '<div class="status error">❌ Incorrect PIN</div>';
+  }
+}
+
+function loadDishes() {
+  db.ref('menu/dishes').once('value', snap => {
+    const dishes = snap.val();
+    if (!dishes) {
+      showStatus('No dishes found in database', 'error');
+      return;
+    }
+    
+    allDishes = dishes;
+    mapImages();
+    renderPreview();
+  });
+}
+
+function mapImages() {
+  let matched = 0;
+  let unmatched = 0;
+  
+  Object.keys(allDishes).forEach(dishId => {
+    const dish = allDishes[dishId];
+    const imagePath = findImageForDish(dish);
+    
+    mappedDishes[dishId] = {
+      ...dish,
+      localImagePath: imagePath
+    };
+    
+    if (imagePath) {
+      matched++;
+    } else {
+      unmatched++;
+    }
+  });
+  
+  // Update stats
+  document.getElementById('total-dishes').textContent = Object.keys(allDishes).length;
+  document.getElementById('matched-count').textContent = matched;
+  document.getElementById('unmatched-count').textContent = unmatched;
+  
+  const percentage = (matched / Object.keys(allDishes).length * 100).toFixed(0);
+  document.getElementById('progress-fill').style.width = percentage + '%';
+}
+
+function findImageForDish(dish) {
+  const dishName = dish.en.toLowerCase().trim();
+  const section = dish.section.toLowerCase();
+  
+  // Map section names to folder names
+  const folderMap = {
+    "appetizers": "starters",
+    "eidam (stews)": "eidam",
+    "grills": "grills",
+    "chinese": "chinease items",
+    "sea food": "seafood",
+    "saudi food": "saudi food",
+    "meat": "meat",
+    "rice": "Rice",
+    "karahi station": "karahi station",
+    "bbq": "bbq",
+    "pakistani food": "pakistani food",
+    "afghani food": "afghani food",
+    "salads": "salad",
+    "burgers & sandwiches": "burger and sanwiches",
+    "naan & roti": "naan roti",
+    "beverages": "beverages",
+    "sweets & desserts": "sweets"
+  };
+  
+  const folderName = folderMap[section];
+  if (!folderName) return null;
+  
+  // Check if we have a mapping for this folder
+  if (IMAGE_MAPPINGS[folderName]) {
+    const mapping = IMAGE_MAPPINGS[folderName];
+    
+    // Try exact match first
+    if (mapping[dishName]) {
+      return `food-images/${folderName}/${mapping[dishName]}`;
+    }
+    
+    // Try partial match
+    for (let key in mapping) {
+      if (dishName.includes(key) || key.includes(dishName)) {
+        return `food-images/${folderName}/${mapping[key]}`;
+      }
+    }
+  }
+  
+  return null;
+}
+
+function renderPreview() {
+  const grid = document.getElementById('mapping-grid');
+  grid.innerHTML = '';
+  
+  Object.keys(mappedDishes).forEach(dishId => {
+    const dish = mappedDishes[dishId];
+    const hasImage = !!dish.localImagePath;
+    
+    const card = document.createElement('div');
+    card.className = `dish-card ${hasImage ? 'matched' : 'unmatched'}`;
+    
+    card.innerHTML = `
+      <div class="dish-name">${dish.en}</div>
+      <div class="dish-section">${dish.section}</div>
+      ${hasImage ? 
+        `<img src="${dish.localImagePath}" class="dish-image-preview" alt="${dish.en}">
+         <div class="image-path">✅ ${dish.localImagePath}</div>` :
+        `<div class="no-image">❌ No matching image found</div>`
+      }
+    `;
+    
+    grid.appendChild(card);
+  });
+}
+
+function updateDatabase() {
+  if (!confirm('This will update the database with local image paths. Continue?')) {
+    return;
+  }
+  
+  showStatus('Updating database...', 'info');
+  
+  const updates = {};
+  Object.keys(mappedDishes).forEach(dishId => {
+    const dish = mappedDishes[dishId];
+    if (dish.localImagePath) {
+      updates[`menu/dishes/${dishId}/imageUrl`] = dish.localImagePath;
+    }
+  });
+  
+  db.ref().update(updates)
+    .then(() => {
+      showStatus('✅ Database updated successfully! All images are now linked.', 'success');
+    })
+    .catch(error => {
+      showStatus('❌ Error updating database: ' + error.message, 'error');
+    });
+}
+
+function showStatus(message, type) {
+  const status = document.getElementById('status');
+  status.innerHTML = `<div class="status ${type}">${message}</div>`;
+}
+</script>
+</body>
+</html>
