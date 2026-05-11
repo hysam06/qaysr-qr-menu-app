@@ -107,35 +107,6 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
 
-  /* ── RTL / ARABIC MODE ── */
-  body.ar {
-    direction: rtl;
-    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-  }
-  body.ar .nav-logo { align-items: flex-end; }
-  body.ar .hero-welcome::before { display: none; }
-  body.ar .hero-welcome::after  { display: none; }
-  body.ar .hero-welcome { letter-spacing: 0; font-size: 13px; }
-  body.ar .hero-title   { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 40px; }
-  body.ar .hero-search input { padding: 13px 44px 13px 18px; text-align: right; }
-  body.ar .hero-search-icon  { left: auto; right: 16px; }
-  body.ar .dish-row-name  { font-size: 16px; }
-  body.ar .dish-row-name-ar { font-size: 15px; color: #1a1a1a; font-weight: 700; }
-  body.ar .dish-row-desc  { text-align: right; }
-  body.ar .dish-price-col { text-align: left; }
-  body.ar .section-header-left { flex-direction: row-reverse; }
-  body.ar .cat-label { text-align: right; }
-  body.ar .modal-title { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
-  body.ar .bottom-bar-left { flex-direction: row-reverse; }
-  body.ar .bottom-bar { flex-direction: row-reverse; }
-
-  @media (min-width: 900px) {
-    body.ar .hero-welcome { justify-content: flex-start; }
-    body.ar .category-scroll { padding: 0 12px; }
-    body.ar .cat-item { flex-direction: row-reverse; }
-    body.ar .cat-label { text-align: right; }
-  }
-
   /* ── HERO ── */
   .hero {
     background: linear-gradient(160deg, #fff9f0 0%, #fff3e0 60%, #ffe8cc 100%);
@@ -1035,7 +1006,6 @@ function toggleLang() {
 function applyLang() {
   const isAr = currentLang === 'ar';
   document.documentElement.lang = currentLang;
-  document.body.classList.toggle('ar', isAr);
 
   // Toggle buttons
   document.getElementById('btn-en').classList.toggle('active', !isAr);
