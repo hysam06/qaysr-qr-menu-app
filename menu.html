@@ -77,6 +77,65 @@
     border-radius: 2px;
   }
 
+  /* ── LANGUAGE TOGGLE ── */
+  .lang-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50px;
+    padding: 3px;
+    border: 1.5px solid rgba(255,215,0,0.5);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .lang-btn {
+    padding: 5px 12px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.65);
+    cursor: pointer;
+    transition: all 0.25s;
+    letter-spacing: 0.5px;
+  }
+  .lang-btn.active {
+    background: #FFD700;
+    color: #1a1a1a;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+
+  /* ── RTL / ARABIC MODE ── */
+  body.ar {
+    direction: rtl;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  }
+  body.ar .nav-logo { align-items: flex-end; }
+  body.ar .hero-welcome::before { display: none; }
+  body.ar .hero-welcome::after  { display: none; }
+  body.ar .hero-welcome { letter-spacing: 0; font-size: 13px; }
+  body.ar .hero-title   { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 40px; }
+  body.ar .hero-search input { padding: 13px 44px 13px 18px; text-align: right; }
+  body.ar .hero-search-icon  { left: auto; right: 16px; }
+  body.ar .dish-row-name  { font-size: 16px; }
+  body.ar .dish-row-name-ar { font-size: 15px; color: #1a1a1a; font-weight: 700; }
+  body.ar .dish-row-desc  { text-align: right; }
+  body.ar .dish-price-col { text-align: left; }
+  body.ar .section-header-left { flex-direction: row-reverse; }
+  body.ar .cat-label { text-align: right; }
+  body.ar .modal-title { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+  body.ar .bottom-bar-left { flex-direction: row-reverse; }
+  body.ar .bottom-bar { flex-direction: row-reverse; }
+
+  @media (min-width: 900px) {
+    body.ar .hero-welcome { justify-content: flex-start; }
+    body.ar .category-scroll { padding: 0 12px; }
+    body.ar .cat-item { flex-direction: row-reverse; }
+    body.ar .cat-label { text-align: right; }
+  }
+
   /* ── HERO ── */
   .hero {
     background: linear-gradient(160deg, #fff9f0 0%, #fff3e0 60%, #ffe8cc 100%);
@@ -769,26 +828,32 @@
 <nav class="top-nav">
   <div class="nav-logo">
     <span class="nav-logo-icon">👑</span>
-    <span class="nav-logo-name">Al Qaysar</span>
-    <span class="nav-logo-sub">Restaurant</span>
+    <span class="nav-logo-name" id="nav-name">Al Qaysar</span>
+    <span class="nav-logo-sub" id="nav-sub">Restaurant</span>
   </div>
   <div class="nav-contact">
     <a href="tel:+966565041261">📞 +966 565 041 261</a>
     <a href="mailto:alqaysarcatering@gmail.com">✉️ alqaysarcatering@gmail.com</a>
-    <a href="#">🕐 Open 24 Hours</a>
+    <a href="#" id="nav-hours">🕐 Open 24 Hours</a>
   </div>
-  <button class="nav-menu-btn" aria-label="Menu">
-    <span></span><span></span><span></span>
-  </button>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="lang-toggle" onclick="toggleLang()">
+      <button class="lang-btn active" id="btn-en">EN</button>
+      <button class="lang-btn" id="btn-ar">ع</button>
+    </div>
+    <button class="nav-menu-btn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </nav>
 
 <!-- HERO -->
 <div class="hero">
   <div class="hero-content">
-    <div class="hero-welcome">Welcome</div>
-    <h1 class="hero-title">Our Menu</h1>
+    <div class="hero-welcome" id="hero-welcome">Welcome</div>
+    <h1 class="hero-title" id="hero-title">Our Menu</h1>
     <div class="hero-divider"><span class="hero-divider-icon">✦</span></div>
-    <p class="hero-subtitle">Lovingly prepared dishes using the finest ingredients, crafted for your perfect dining experience.</p>
+    <p class="hero-subtitle" id="hero-subtitle">Lovingly prepared dishes using the finest ingredients, crafted for your perfect dining experience.</p>
     <div class="hero-search">
       <span class="hero-search-icon">🔍</span>
       <input type="text" id="search-input" placeholder="Search dishes..." oninput="searchDishes(this.value)">
@@ -797,20 +862,20 @@
   <div class="hero-deco">
     <div class="hero-deco-badge">
       <span class="hero-deco-badge-num">24</span>
-      <span class="hero-deco-badge-text">Hours Open</span>
+      <span class="hero-deco-badge-text" id="deco-hours">Hours Open</span>
     </div>
     <div class="hero-deco-info">
       <div class="hero-deco-stat">
         <div class="hero-deco-stat-num">17+</div>
-        <div class="hero-deco-stat-label">Categories</div>
+        <div class="hero-deco-stat-label" id="deco-cats">Categories</div>
       </div>
       <div class="hero-deco-stat">
         <div class="hero-deco-stat-num">100+</div>
-        <div class="hero-deco-stat-label">Dishes</div>
+        <div class="hero-deco-stat-label" id="deco-dishes">Dishes</div>
       </div>
       <div class="hero-deco-stat">
         <div class="hero-deco-stat-num">⭐ 4.8</div>
-        <div class="hero-deco-stat-label">Rating</div>
+        <div class="hero-deco-stat-label" id="deco-rating">Rating</div>
       </div>
     </div>
   </div>
@@ -864,11 +929,11 @@
   <div class="bottom-bar-left">
     <div class="bottom-bar-icon">🍽️</div>
     <div>
-      <div class="bottom-bar-text-main">Al Qaysar Restaurant</div>
-      <div class="bottom-bar-text-sub">Open 24 Hours · Duba, Saudi Arabia</div>
+      <div class="bottom-bar-text-main" id="bar-name">Al Qaysar Restaurant</div>
+      <div class="bottom-bar-text-sub" id="bar-sub">Open 24 Hours · Duba, Saudi Arabia</div>
     </div>
   </div>
-  <a href="tel:+966565041261"><button class="bottom-bar-btn">Call Us</button></a>
+  <a href="tel:+966565041261"><button class="bottom-bar-btn" id="bar-btn">Call Us</button></a>
 </div>
 
 <script>
@@ -910,16 +975,109 @@ const CAT_SHORT = {
   "Naan & Roti": "Naan", "Beverages": "Drinks", "Sweets & Desserts": "Sweets"
 };
 
-let allDishes = [];
-let currentSection = "All";
+// ── LANGUAGE ──────────────────────────────
+let currentLang = 'en';
+
+const TRANSLATIONS = {
+  en: {
+    navName: 'Al Qaysar', navSub: 'Restaurant', navHours: '🕐 Open 24 Hours',
+    heroWelcome: 'Welcome', heroTitle: 'Our Menu',
+    heroSubtitle: 'Lovingly prepared dishes using the finest ingredients, crafted for your perfect dining experience.',
+    searchPlaceholder: 'Search dishes...',
+    decoHours: 'Hours Open', decoCats: 'Categories', decoDishes: 'Dishes', decoRating: 'Rating',
+    barName: 'Al Qaysar Restaurant', barSub: 'Open 24 Hours · Duba, Saudi Arabia', barBtn: 'Call Us',
+    loading: 'Loading menu...', noMenu: 'Menu not available yet', noMenuSub: 'Please check back shortly or ask our staff.',
+    noResults: 'No dishes found', noResultsSub: 'Try a different category or search term.',
+    askStaff: 'Ask staff', askStaffModal: 'Ask staff for price',
+    catAll: 'All', catShort: {
+      "All":"All","Appetizers":"Starters","Eidam (Stews)":"Stews","Grills":"Grills",
+      "Chinese":"Chinese","Sea Food":"Sea Food","Saudi Food":"Saudi","Meat":"Meat",
+      "Rice":"Rice","Karahi Station":"Karahi","BBQ":"BBQ","Pakistani Food":"Pakistani",
+      "Afghani Food":"Afghani","Salads":"Salads","Burgers & Sandwiches":"Burgers",
+      "Naan & Roti":"Naan","Beverages":"Drinks","Sweets & Desserts":"Sweets"
+    },
+    dishDesc: (name, section) => `Delicious ${name} from our ${section} menu. Ask our staff for more details.`
+  },
+  ar: {
+    navName: 'القيصر', navSub: 'مطعم', navHours: '🕐 مفتوح ٢٤ ساعة',
+    heroWelcome: 'أهلاً وسهلاً', heroTitle: 'قائمة الطعام',
+    heroSubtitle: 'أطباق مُعدَّة بعناية من أجود المكونات، لتجربة طعام لا تُنسى.',
+    searchPlaceholder: 'ابحث عن الأطباق...',
+    decoHours: 'ساعة مفتوح', decoCats: 'تصنيف', decoDishes: 'طبق', decoRating: 'التقييم',
+    barName: 'مطعم القيصر', barSub: 'مفتوح ٢٤ ساعة · ضبا، المملكة العربية السعودية', barBtn: 'اتصل بنا',
+    loading: 'جارٍ تحميل القائمة...', noMenu: 'القائمة غير متاحة حالياً', noMenuSub: 'يرجى المراجعة لاحقاً أو سؤال الموظفين.',
+    noResults: 'لا توجد أطباق', noResultsSub: 'جرّب تصنيفاً أو كلمة بحث مختلفة.',
+    askStaff: 'اسأل الموظف', askStaffModal: 'اسأل الموظف عن السعر',
+    catAll: 'الكل', catShort: {
+      "All":"الكل","Appetizers":"المقبلات","Eidam (Stews)":"الإدام","Grills":"المشويات",
+      "Chinese":"صيني","Sea Food":"مأكولات بحرية","Saudi Food":"سعودي","Meat":"لحوم",
+      "Rice":"أرز","Karahi Station":"كراهي","BBQ":"باربيكيو","Pakistani Food":"باكستاني",
+      "Afghani Food":"أفغاني","Salads":"سلطات","Burgers & Sandwiches":"برغر وسندويش",
+      "Naan & Roti":"خبز","Beverages":"مشروبات","Sweets & Desserts":"حلويات"
+    },
+    dishDesc: (name, section) => `${name} من قسم ${section}. اسأل موظفينا لمزيد من التفاصيل.`
+  }
+};
+
+function t(key, ...args) {
+  const tr = TRANSLATIONS[currentLang];
+  const val = tr[key];
+  return typeof val === 'function' ? val(...args) : val;
+}
+
+function toggleLang() {
+  currentLang = currentLang === 'en' ? 'ar' : 'en';
+  applyLang();
+  renderCategories();
+  renderMenu();
+}
+
+function applyLang() {
+  const isAr = currentLang === 'ar';
+  document.documentElement.lang = currentLang;
+  document.body.classList.toggle('ar', isAr);
+
+  // Toggle buttons
+  document.getElementById('btn-en').classList.toggle('active', !isAr);
+  document.getElementById('btn-ar').classList.toggle('active', isAr);
+
+  // Nav
+  document.getElementById('nav-name').textContent = t('navName');
+  document.getElementById('nav-sub').textContent = t('navSub');
+  document.getElementById('nav-hours').textContent = t('navHours');
+
+  // Hero
+  document.getElementById('hero-welcome').textContent = t('heroWelcome');
+  document.getElementById('hero-title').textContent = t('heroTitle');
+  document.getElementById('hero-subtitle').textContent = t('heroSubtitle');
+  document.getElementById('search-input').placeholder = t('searchPlaceholder');
+
+  // Deco
+  const decoHours = document.getElementById('deco-hours');
+  const decoCats  = document.getElementById('deco-cats');
+  const decoDishes = document.getElementById('deco-dishes');
+  const decoRating = document.getElementById('deco-rating');
+  if (decoHours)  decoHours.textContent  = t('decoHours');
+  if (decoCats)   decoCats.textContent   = t('decoCats');
+  if (decoDishes) decoDishes.textContent = t('decoDishes');
+  if (decoRating) decoRating.textContent = t('decoRating');
+
+  // Bottom bar
+  document.getElementById('bar-name').textContent = t('barName');
+  document.getElementById('bar-sub').textContent  = t('barSub');
+  document.getElementById('bar-btn').textContent  = t('barBtn');
+}
+// ──────────────────────────────────────────
+
+
 
 db.ref('menu').on('value', snap => {
   const data = snap.val();
   if (!data || !data.dishes) {
     document.getElementById('content').innerHTML = `
       <div class="empty-state">
-        <h2>Menu not available yet</h2>
-        <p>Please check back shortly or ask our staff.</p>
+        <h2>${t('noMenu')}</h2>
+        <p>${t('noMenuSub')}</p>
       </div>`;
     return;
   }
@@ -932,24 +1090,26 @@ function renderCategories() {
   const groups = {};
   allDishes.forEach(d => { if (!groups[d.section]) groups[d.section] = []; groups[d.section].push(d); });
   const sections = ["All", ...SECTION_ORDER.filter(s => s !== "All" && groups[s])];
+  const catShort = t('catShort');
   document.getElementById('category-tabs').innerHTML = sections.map(s => `
     <div class="cat-item ${s === currentSection ? 'active' : ''}" onclick="filterBySection('${s}')">
       <div class="cat-icon-wrap">${CATEGORY_ICONS[s] || '🍽️'}</div>
-      <span class="cat-label">${CAT_SHORT[s] || s}</span>
+      <span class="cat-label">${catShort[s] || s}</span>
     </div>
   `).join('');
 }
 
 function renderMenu(dishes = null) {
   const list = dishes || (currentSection === "All" ? allDishes : allDishes.filter(d => d.section === currentSection));
+  const isAr = currentLang === 'ar';
+  const catShort = t('catShort');
 
   if (!list.length) {
     document.getElementById('content').innerHTML = `
-      <div class="empty-state"><h2>No dishes found</h2><p>Try a different category or search term.</p></div>`;
+      <div class="empty-state"><h2>${t('noResults')}</h2><p>${t('noResultsSub')}</p></div>`;
     return;
   }
 
-  // Group by section
   const grouped = {};
   list.forEach(d => {
     if (!grouped[d.section]) grouped[d.section] = [];
@@ -965,11 +1125,14 @@ function renderMenu(dishes = null) {
       <div class="section-header">
         <div class="section-header-left">
           <span class="section-header-icon">↓</span>
-          <span class="section-header-title">${sec}</span>
+          <span class="section-header-title">${catShort[sec] || sec}</span>
         </div>
       </div>
       <div class="dishes-grid">
-        ${(grouped[sec] || []).map(dish => `
+        ${(grouped[sec] || []).map(dish => {
+          const primaryName = isAr ? dish.ar : dish.en;
+          const secondaryName = isAr ? dish.en : dish.ar;
+          return `
           <div class="dish-row" onclick='openDishModal(${JSON.stringify(dish).replace(/'/g, "&#39;")})'>
             <div class="dish-thumb">
               ${dish.imageUrl
@@ -979,18 +1142,18 @@ function renderMenu(dishes = null) {
               }
             </div>
             <div class="dish-details">
-              <div class="dish-row-name">${dish.en}</div>
-              <div class="dish-row-name-ar">${dish.ar}</div>
-              <div class="dish-row-desc">${dish.description || 'Ask our staff for details about this dish.'}</div>
+              <div class="dish-row-name">${primaryName}</div>
+              <div class="dish-row-name-ar">${secondaryName}</div>
+              <div class="dish-row-desc">${dish.description || t('dishDesc', dish.en, dish.section)}</div>
             </div>
             <div class="dish-price-col">
               ${dish.price
                 ? `<div class="dish-row-price">${dish.price}<span class="currency">ر.س</span></div>`
-                : `<div class="price-ask">Ask staff</div>`
+                : `<div class="price-ask">${t('askStaff')}</div>`
               }
             </div>
-          </div>
-        `).join('')}
+          </div>`;
+        }).join('')}
       </div>
     </div>
   `).join('');
@@ -1010,6 +1173,7 @@ function searchDishes(query) {
 }
 
 function openDishModal(dish) {
+  const isAr = currentLang === 'ar';
   const imgWrap = document.getElementById('modal-image');
   if (dish.imageUrl) {
     imgWrap.innerHTML = `
@@ -1019,18 +1183,19 @@ function openDishModal(dish) {
   } else {
     imgWrap.innerHTML = `<div class="modal-img-placeholder">${CATEGORY_ICONS[dish.section] || '🍽️'}</div>`;
   }
-  document.getElementById('modal-section-tag').textContent = dish.section;
-  document.getElementById('modal-title').textContent = dish.en;
-  document.getElementById('modal-title-ar').textContent = dish.ar;
+  const catShort = t('catShort');
+  document.getElementById('modal-section-tag').textContent = catShort[dish.section] || dish.section;
+  document.getElementById('modal-title').textContent    = isAr ? dish.ar : dish.en;
+  document.getElementById('modal-title-ar').textContent = isAr ? dish.en : dish.ar;
   if (dish.price) {
     document.getElementById('modal-price-val').textContent = dish.price;
     document.getElementById('modal-price-cur').textContent = 'ر.س';
   } else {
-    document.getElementById('modal-price-val').textContent = 'Ask staff';
+    document.getElementById('modal-price-val').textContent = t('askStaffModal');
     document.getElementById('modal-price-cur').textContent = '';
   }
   document.getElementById('modal-description').textContent =
-    dish.description || `Delicious ${dish.en} from our ${dish.section} menu. Ask our staff for more details.`;
+    dish.description || t('dishDesc', dish.en, dish.section);
   document.getElementById('dish-modal').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
