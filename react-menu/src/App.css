@@ -240,7 +240,7 @@ body {
   background: linear-gradient(135deg, #fff3e0, #ffe0b2);
   position: relative; overflow: hidden;
 }
-.modal-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.modal-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .modal-img-placeholder {
   width: 100%; height: 100%; display: flex;
   align-items: center; justify-content: center; font-size: 72px;

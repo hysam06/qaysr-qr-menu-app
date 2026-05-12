@@ -5,6 +5,22 @@ import { db } from './firebase';
 import { TRANSLATIONS, CATEGORY_ICONS, SECTION_ORDER } from './translations';
 import './App.css';
 
+// Image component with fallback
+function DishImage({ src, alt, icon }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <div className="dish-thumb-placeholder">{icon}</div>;
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setFailed(true)}
+      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+    />
+  );
+}
+
 function App() {
   const [lang, setLang] = useState('en');
   const [dishes, setDishes] = useState([]);
@@ -24,7 +40,12 @@ function App() {
     const unsubscribe = onValue(menuRef, (snapshot) => {
       const data = snapshot.val();
       if (data && data.dishes) {
-        setDishes(Object.values(data.dishes));
+        const dishList = Object.values(data.dishes);
+        // Debug: log first dish to check imageUrl format
+        if (dishList.length > 0) {
+          console.log('Sample dish imageUrl:', dishList[0].imageUrl);
+        }
+        setDishes(dishList);
       }
       setLoading(false);
     });
@@ -245,13 +266,11 @@ function App() {
                               whileHover={{ scale: 1.1 }}
                               transition={{ type: 'spring', stiffness: 300 }}
                             >
-                              {dish.imageUrl ? (
-                                <img src={dish.imageUrl} alt={dish.en} />
-                              ) : (
-                                <div className="dish-thumb-placeholder">
-                                  {CATEGORY_ICONS[dish.section] || '🍽️'}
-                                </div>
-                              )}
+                              <DishImage
+                                src={dish.imageUrl}
+                                alt={dish.en}
+                                icon={CATEGORY_ICONS[dish.section] || '🍽️'}
+                              />
                             </motion.div>
                             <div className="dish-details">
                               <div className="dish-row-name">{primaryName}</div>
@@ -300,13 +319,11 @@ function App() {
               transition={{ type: 'spring', damping: 25 }}
             >
               <div className="modal-img-wrap">
-                {selectedDish.imageUrl ? (
-                  <img src={selectedDish.imageUrl} alt={selectedDish.en} />
-                ) : (
-                  <div className="modal-img-placeholder">
-                    {CATEGORY_ICONS[selectedDish.section] || '🍽️'}
-                  </div>
-                )}
+                <DishImage
+                  src={selectedDish.imageUrl}
+                  alt={selectedDish.en}
+                  icon={CATEGORY_ICONS[selectedDish.section] || '🍽️'}
+                />
                 <button className="modal-close-btn" onClick={() => setSelectedDish(null)}>✕</button>
               </div>
               <div className="modal-handle"></div>
