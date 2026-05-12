@@ -5,3 +5,4 @@ android/local.properties
 *.apk
 *.aab
 .DS_Store
+react-menu/node_modules/

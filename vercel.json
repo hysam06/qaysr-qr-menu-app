@@ -2,22 +2,30 @@
   "version": 2,
   "builds": [
     {
-      "src": "*.html",
+      "src": "dist/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "staff.html",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/",
-      "dest": "/menu.html"
+      "dest": "/dist/index.html"
     },
     {
       "src": "/menu",
-      "dest": "/menu.html"
+      "dest": "/dist/index.html"
     },
     {
       "src": "/staff",
       "dest": "/staff.html"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/dist/assets/$1"
     }
   ]
 }
