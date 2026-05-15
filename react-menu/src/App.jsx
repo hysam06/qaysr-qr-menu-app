@@ -5,17 +5,46 @@ import { db } from './firebase';
 import { TRANSLATIONS, CATEGORY_ICONS, SECTION_ORDER } from './translations';
 import './App.css';
 
+function getImageCandidates(src) {
+  if (!src) return [];
+  if (/^https?:\/\//i.test(src)) return [src];
+
+  const cleanSrc = src.replace(/^\/+/, '');
+  const withoutFoodPrefix = cleanSrc
+    .replace(/^food-images\//, '')
+    .replace(/^food_compressed\//, '')
+    .replace(/^food\//, '')
+    .replace(/^food \//, '');
+
+  const candidates = [
+    `/food-images/${withoutFoodPrefix.replace(/\.png$/i, '.jpg')}`,
+    `/food-images/${withoutFoodPrefix}`,
+    `/${cleanSrc}`,
+  ];
+
+  return [...new Set(candidates)];
+}
+
 // Image component with fallback
 function DishImage({ src, alt, icon }) {
-  const [failed, setFailed] = useState(false);
-  if (!src || failed) {
+  const candidates = getImageCandidates(src);
+  const [candidateIndex, setCandidateIndex] = useState(0);
+
+  useEffect(() => {
+    setCandidateIndex(0);
+  }, [src]);
+
+  if (candidates.length === 0 || candidateIndex >= candidates.length) {
     return <div className="dish-thumb-placeholder">{icon}</div>;
   }
+
   return (
     <img
-      src={src}
+      src={candidates[candidateIndex]}
       alt={alt}
-      onError={() => setFailed(true)}
+      loading="lazy"
+      decoding="async"
+      onError={() => setCandidateIndex((index) => index + 1)}
       style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
     />
   );
@@ -84,9 +113,16 @@ function App() {
         transition={{ type: 'spring', stiffness: 100 }}
       >
         <div className="nav-logo">
-          <span className="nav-logo-icon">👑</span>
-          <span className="nav-logo-name">{t('navName')}</span>
-          <span className="nav-logo-sub">{t('navSub')}</span>
+          <img
+            className="nav-logo-img"
+            src="/logo.png"
+            alt="Al Qaysar Restaurant"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+          <div className="nav-logo-text">
+            <span className="nav-logo-name">{t('navName')}</span>
+            <span className="nav-logo-sub">{t('navSub')}</span>
+          </div>
         </div>
         <div className="nav-contact">
           <a href="tel:+966565041261">📞 +966 565 041 261</a>
@@ -258,7 +294,7 @@ function App() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.05 }}
-                            whileHover={{ scale: 1.02, backgroundColor: '#fffaf5' }}
+                            whileHover={{ scale: 1.01, backgroundColor: '#1a1a1a' }}
                             whileTap={{ scale: 0.98 }}
                           >
                             <motion.div 

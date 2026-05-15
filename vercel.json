@@ -26,6 +26,14 @@
     {
       "src": "/assets/(.*)",
       "dest": "/dist/assets/$1"
+    },
+    {
+      "src": "/food-images/(.*)",
+      "dest": "/dist/food-images/$1"
+    },
+    {
+      "src": "/logo.png",
+      "dest": "/dist/logo.png"
     }
   ]
 }
